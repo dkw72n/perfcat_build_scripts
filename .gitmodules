@@ -1,0 +1,12 @@
+[submodule "libimobiledevice"]
+	path = libimobiledevice
+	url = git@gitlab.testplus.cn:PerfCat/libimobiledevice.git
+[submodule "libusbmuxd"]
+	path = libusbmuxd
+	url = https://github.com/libimobiledevice/libusbmuxd.git
+[submodule "libplist"]
+	path = libplist
+	url = https://github.com/libimobiledevice/libplist.git
+[submodule "openssl"]
+	path = openssl
+	url = https://github.com/openssl/openssl.git
