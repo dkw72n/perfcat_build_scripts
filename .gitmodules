@@ -1,6 +1,6 @@
 [submodule "libimobiledevice"]
 	path = libimobiledevice
-	url = git@gitlab.testplus.cn:PerfCat/libimobiledevice.git
+	url = git@github.com:dkw72n/libimobiledevice.git 
 [submodule "libusbmuxd"]
 	path = libusbmuxd
 	url = https://github.com/libimobiledevice/libusbmuxd.git
