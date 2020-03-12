@@ -12,7 +12,7 @@ build_libplist() {
   set -ex
   cd ${MY_DIR}/../../libplist
   make clean || true
-  ./autogen.sh --prefix=${TARGET_DIR} --without-cython
+  ./autogen.sh --prefix=${TARGET_DIR} --without-cython --enable-shared=no CFLAGS=-fPIC
   make -j2
   make install
   )
@@ -23,7 +23,7 @@ build_libusbmuxd(){
   set -ex
   cd ${MY_DIR}/../../libusbmuxd
   make clean || true
-  ./autogen.sh --prefix=${TARGET_DIR} 
+  ./autogen.sh --prefix=${TARGET_DIR} --enable-shared=no CFLAGS=-fPIC
   make -j2
   make install
   )
@@ -34,7 +34,7 @@ build_openssl(){
   set -ex
   cd ${MY_DIR}/../../openssl
   make clean || true
-  ./Configure linux-x86_64 --prefix=${TARGET_DIR} --openssldir=${TARGET_DIR}/openssl
+  ./Configure no-shared linux-x86_64 --prefix=${TARGET_DIR} --openssldir=${TARGET_DIR}/openssl
   make -j2
   make install
   )
@@ -45,8 +45,8 @@ build_libimobiledevice(){
   set -ex
   cd ${MY_DIR}/../../libimobiledevice
   make clean || true
-  ./autogen.sh --prefix=${TARGET_DIR} --without-cython
-  make -j2
+  ./autogen.sh --prefix=${TARGET_DIR} --without-cython LDFLAGS="-Wl,--no-as-needed -ldl"
+  make -j2 V=1
   make install
   )
 }
