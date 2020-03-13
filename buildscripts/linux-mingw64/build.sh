@@ -54,7 +54,7 @@ build_libimobiledevice(){
 echo "如果编译失败, 请修改 /usr/share/aclocal/libtool.m4: "
 echo "在合适的位置加上"
 echo "   lt_cv_deplibs_check_method=pass_all  "
-echo ""
+echo "ref: https://lists.gnu.org/archive/html/libtool/2012-07/msg00000.html"
 
 case $1 in 
   libplist)
