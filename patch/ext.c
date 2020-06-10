@@ -30,7 +30,9 @@
 #include <windows.h>
 #endif
 
+#ifndef WIN32
 #include <netdb.h>
+#endif
 
 LIBIMOBILEDEVICE_API idevice_error_t idevice_new_force_network(idevice_t * device, const char *udid, const char* host)
 {
