@@ -45,9 +45,14 @@ build_libimobiledevice(){
   set -ex
   cd ${MY_DIR}/../../libimobiledevice
   make clean || true
-  ./autogen.sh --prefix=${TARGET_DIR} --host=x86_64-w64-mingw32 --without-cython LIBS="-lcrypt32" LDFLAGS="-Wl,--export-all-symbols"
+  sed -i "s/idevice\.c idevice\.h/idevice.c ext.c idevice.h/" src/Makefile.am
+  cp ../patch/ext.c src/
+  cp ../patch/ext.h include/libimobiledevice
+  ./autogen.sh --prefix=${TARGET_DIR} --host=x86_64-w64-mingw32 --without-cython --enable-debug-code LIBS="-lcrypt32" LDFLAGS="-Wl,--export-all-symbols"
   make -j4 V=1
   make install
+  git checkout -- .
+  rm src/ext.c include/libimobiledevice/ext.h
   )
 }
 

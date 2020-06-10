@@ -1,12 +1,15 @@
 [submodule "libimobiledevice"]
 	path = libimobiledevice
-	url = git@github.com:dkw72n/libimobiledevice.git 
+    url = https://github.com/libimobiledevice/libimobiledevice.git
+    branch = master
 [submodule "libusbmuxd"]
 	path = libusbmuxd
 	url = https://github.com/libimobiledevice/libusbmuxd.git
+    branch = master
 [submodule "libplist"]
 	path = libplist
 	url = https://github.com/libimobiledevice/libplist.git
+    branch = master
 [submodule "openssl"]
 	path = openssl
 	url = https://github.com/openssl/openssl.git

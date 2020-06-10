@@ -44,10 +44,16 @@ build_libimobiledevice(){
   (
   set -ex
   cd ${MY_DIR}/../../libimobiledevice
+  git clean -f -d
   make clean || true
-  ./autogen.sh --prefix=${TARGET_DIR} --without-cython LDFLAGS="-Wl,--no-as-needed -ldl"
+  sed -i "s/idevice\.c idevice\.h/idevice.c ext.c idevice.h/" src/Makefile.am
+  cp ../patch/ext.c src/
+  cp ../patch/ext.h include/libimobiledevice
+  ./autogen.sh --prefix=${TARGET_DIR} --without-cython --enable-debug-code LDFLAGS="-Wl,--no-as-needed -ldl"
   make -j2 V=1
   make install
+  git checkout -- .
+  rm src/ext.c include/libimobiledevice/ext.h
   )
 }
 
