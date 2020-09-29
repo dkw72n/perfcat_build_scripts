@@ -22,8 +22,10 @@ build_libusbmuxd(){
   (
   set -ex
   cd ${MY_DIR}/../../libusbmuxd
+  git checkout -- .
+  git apply ../patch/libusbmuxd-socket-mingw-compatibility.patch
   make clean || true
-  ./autogen.sh --prefix=${TARGET_DIR} --host=x86_64-w64-mingw32 CFLAGS=-fPIC --enable-shared=no
+  ./autogen.sh --prefix=${TARGET_DIR} --host=x86_64-w64-mingw32 CFLAGS="-fPIC -D_WIN32_WINNT=0x601" --enable-shared=no
   make -j4 V=1
   make install
   )
@@ -44,11 +46,13 @@ build_libimobiledevice(){
   (
   set -ex
   cd ${MY_DIR}/../../libimobiledevice
+  git checkout -- .
   make clean || true
   sed -i "s/idevice\.c idevice\.h/idevice.c ext.c idevice.h/" src/Makefile.am
   cp ../patch/ext.c src/
   cp ../patch/ext.h include/libimobiledevice
-  ./autogen.sh --prefix=${TARGET_DIR} --host=x86_64-w64-mingw32 --without-cython --enable-debug-code LIBS="-lcrypt32" LDFLAGS="-Wl,--export-all-symbols"
+  git apply ../patch/libimobiledevice-socket-mingw-compatibility.patch
+  ./autogen.sh --prefix=${TARGET_DIR} --host=x86_64-w64-mingw32 --without-cython --enable-debug-code LIBS="-lcrypt32" LDFLAGS="-Wl,--export-all-symbols" CFLAGS="-D_WIN32_WINNT=0x601"
   make -j4 V=1
   make install
   git checkout -- .
