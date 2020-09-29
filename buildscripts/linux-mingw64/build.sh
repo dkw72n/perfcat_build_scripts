@@ -28,6 +28,8 @@ build_libusbmuxd(){
   ./autogen.sh --prefix=${TARGET_DIR} --host=x86_64-w64-mingw32 CFLAGS="-fPIC -D_WIN32_WINNT=0x601" --enable-shared=no
   make -j4 V=1
   make install
+  rm tools/*.exe -f
+  git checkout -- .
   )
 }
 
