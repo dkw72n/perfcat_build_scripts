@@ -13,6 +13,7 @@ mobile_image_mounter_error_t mobile_image_mounter_mount_image_file(mobile_image_
 void libimobiledevice_free(void* ptr);
 
 #define INSTRUMENT_REMOTESERVER_SERVICE_NAME "com.apple.instruments.remoteserver"
+#define INSTRUMENT_REMOTESERVER_SERVICE_NAME_IOS14 "com.apple.instruments.remoteserver.DVTSecureSocketProxy"
 
 /** Error Codes */
 typedef enum {
