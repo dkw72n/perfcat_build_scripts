@@ -36,7 +36,7 @@ build_openssl(){
   make clean || true
   ./Configure no-shared linux-x86_64 --prefix=${TARGET_DIR} --openssldir=${TARGET_DIR}/openssl
   make -j2
-  make install
+  make install_sw
   )
 }
 
