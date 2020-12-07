@@ -155,26 +155,11 @@ LIBIMOBILEDEVICE_API instrument_error_t instrument_client_new(idevice_t device, 
     if(err != INSTRUMENT_E_SUCCESS){
         return err;
     }
-    err = service_disable_bypass_ssl(service_client, 1);
-    if(err != INSTRUMENT_E_SUCCESS){
-        return err;
+
+    if (service->identifier && (strcmp(service->identifier, INSTRUMENT_REMOTESERVER_SECURE_SERVICE_NAME) != 0)) {
+      service_disable_bypass_ssl(service_client, 1);
     }
-    instrument_client_t client_loc = (instrument_client_t) malloc(sizeof(struct instrument_client_private));
-    client_loc->parent = service_client;
-    *client = client_loc;
 
-    return INSTRUMENT_E_SUCCESS;
-
-}
-
-LIBIMOBILEDEVICE_API instrument_error_t instrument_client_new_ios14(idevice_t device, lockdownd_service_descriptor_t service, instrument_client_t * client){
-    service_client_t service_client = NULL;
-    if (!device || !service || service->port == 0 || !client || *client)
-		return INSTRUMENT_E_INVALID_ARG;
-    instrument_error_t err = instrument_error(service_client_new(device, service, &service_client));
-    if(err != INSTRUMENT_E_SUCCESS){
-        return err;
-    }
     instrument_client_t client_loc = (instrument_client_t) malloc(sizeof(struct instrument_client_private));
     client_loc->parent = service_client;
     *client = client_loc;
@@ -187,12 +172,14 @@ LIBIMOBILEDEVICE_API instrument_error_t instrument_client_start_service(idevice_
     // internal_set_debug_level(1);
     instrument_error_t err = INSTRUMENT_E_UNKNOWN_ERROR;
     instrument_error_t start_service_error = INSTRUMENT_E_UNKNOWN_ERROR;
-	start_service_error = instrument_error(service_client_factory_start_service(device, INSTRUMENT_REMOTESERVER_SERVICE_NAME, (void**)client, label, SERVICE_CONSTRUCTOR(instrument_client_new), &err));
+	
+	// try secure mode
+	start_service_error = instrument_error(service_client_factory_start_service(device, INSTRUMENT_REMOTESERVER_SECURE_SERVICE_NAME, (void**)client, label, SERVICE_CONSTRUCTOR(instrument_client_new), &err));
     if (start_service_error == INSTRUMENT_E_SUCCESS){
         return err;
     }
-	// try ios14
-	start_service_error = instrument_error(service_client_factory_start_service(device, INSTRUMENT_REMOTESERVER_SERVICE_NAME_IOS14, (void**)client, label, SERVICE_CONSTRUCTOR(instrument_client_new_ios14), &err));
+    // fallback
+    start_service_error = instrument_error(service_client_factory_start_service(device, INSTRUMENT_REMOTESERVER_SERVICE_NAME, (void**)client, label, SERVICE_CONSTRUCTOR(instrument_client_new), &err));
     if (start_service_error == INSTRUMENT_E_SUCCESS){
         return err;
     }
