@@ -1,0 +1,38 @@
+diff --git a/src/idevice.c b/src/idevice.c
+index 47c9ab4..268be71 100644
+--- a/src/idevice.c
++++ b/src/idevice.c
+@@ -659,6 +659,7 @@ static idevice_error_t internal_connection_receive_timeout(idevice_connection_t
+ 
+ LIBIMOBILEDEVICE_API idevice_error_t idevice_connection_receive_timeout(idevice_connection_t connection, char *data, uint32_t len, uint32_t *recv_bytes, unsigned int timeout)
+ {
++	int syscall_error_count = 0;
+ 	if (!connection || (connection->ssl_data && !connection->ssl_data->session) || len == 0) {
+ 		return IDEVICE_E_INVALID_ARG;
+ 	}
+@@ -667,7 +668,7 @@ LIBIMOBILEDEVICE_API idevice_error_t idevice_connection_receive_timeout(idevice_
+ 		uint32_t received = 0;
+ 		int do_select = 1;
+ 
+-		while (received < len) {
++		while (received < len && syscall_error_count < 20) {
+ #ifdef HAVE_OPENSSL
+ 			do_select = (SSL_pending(connection->ssl_data->session) == 0);
+ #endif
+@@ -689,11 +690,16 @@ LIBIMOBILEDEVICE_API idevice_error_t idevice_connection_receive_timeout(idevice_
+ 			int r = SSL_read(connection->ssl_data->session, (void*)((char*)(data+received)), (int)len-received);
+ 			if (r > 0) {
+ 				received += r;
++				syscall_error_count = 0;
+ 			} else {
+ 				int sslerr = SSL_get_error(connection->ssl_data->session, r);
+ 				if (sslerr == SSL_ERROR_WANT_READ) {
+ 					continue;
+ 				}
++				if (sslerr == SSL_ERROR_SYSCALL && r == -1 && errno == 0) {
++					syscall_error_count++;
++					continue;
++				}
+ 				break;
+ 			}
+ #else

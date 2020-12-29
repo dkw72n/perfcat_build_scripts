@@ -40,7 +40,7 @@ build_openssl(){
   make clean || true
   ./Configure no-shared mingw64 --prefix=${TARGET_DIR} --cross-compile-prefix=x86_64-w64-mingw32- --openssldir=${TARGET_DIR}/openssl
   make -j6
-  make install
+  make install_sw
   )
 }
 
@@ -54,7 +54,8 @@ build_libimobiledevice(){
   cp ../patch/ext.c src/
   cp ../patch/ext.h include/libimobiledevice
   git apply ../patch/libimobiledevice-socket-mingw-compatibility.patch
-  ./autogen.sh --prefix=${TARGET_DIR} --host=x86_64-w64-mingw32 --without-cython --enable-debug-code LIBS="-lcrypt32" LDFLAGS="-Wl,--export-all-symbols" CFLAGS="-D_WIN32_WINNT=0x601"
+  git apply ../patch/libimobiledevice-openssl-concurrently-read-write-bug-workaround.patch
+  ./autogen.sh --prefix=${TARGET_DIR} --host=x86_64-w64-mingw32 --without-cython --enable-debug LIBS="-lcrypt32" LDFLAGS="-Wl,--export-all-symbols" CFLAGS="-D_WIN32_WINNT=0x601"
   make -j4 V=1
   make install
   git checkout -- .
