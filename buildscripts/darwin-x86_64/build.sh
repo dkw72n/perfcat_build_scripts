@@ -48,7 +48,14 @@ build_libimobiledevice(){
   (
   set -ex
   cd ${MY_DIR}/../../libimobiledevice
+  git checkout -- .
   make clean || true
+  sed -i "" "s/idevice\.c idevice\.h/idevice.c ext.c idevice.h/" src/Makefile.am
+  sed -i "" "s|libimobiledevice/service.h|libimobiledevice/service.h libimobiledevice/ext.h|" include/Makefile.am
+  
+  cp ../patch/ext.c src/
+  cp ../patch/ext.h include/libimobiledevice
+  # git apply ../patch/libimobiledevice-socket-mingw-compatibility.patch
   ./autogen.sh --prefix=${TARGET_DIR} --without-cython
   make -j2
   make install
