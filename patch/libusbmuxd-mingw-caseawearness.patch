@@ -1,0 +1,24 @@
+diff --git a/common/Makefile.am b/common/Makefile.am
+index 8d0e889..d69f7a9 100644
+--- a/common/Makefile.am
++++ b/common/Makefile.am
+@@ -12,5 +12,5 @@ libinternalcommon_la_SOURCES =			\
+ 	collection.h
+ 
+ if WIN32
+-libinternalcommon_la_LIBADD += -lws2_32 -lIphlpapi
++libinternalcommon_la_LIBADD += -lws2_32 -liphlpapi
+ endif
+diff --git a/src/Makefile.am b/src/Makefile.am
+index dc9a730..52ffa98 100644
+--- a/src/Makefile.am
++++ b/src/Makefile.am
+@@ -10,7 +10,7 @@ libusbmuxd_2_0_la_SOURCES = libusbmuxd.c
+ 
+ if WIN32
+ libusbmuxd_2_0_la_LDFLAGS += -avoid-version -static-libgcc
+-libusbmuxd_2_0_la_LIBADD += -lws2_32 -lIphlpapi
++libusbmuxd_2_0_la_LIBADD += -lws2_32 -liphlpapi
+ endif
+ 
+ pkgconfigdir = $(libdir)/pkgconfig
