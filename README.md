@@ -18,6 +18,24 @@ windows(build on ubuntu)
 ```
 
 
+macOS(x86_64)
+
+```bash
+$ brew install libtool
+$ brew install automake
+$ cd buildscripts/darwin-x86_64
+$ ./build.sh
+```
+
+macOS(arm64)
+
+```bash
+$ brew install libtool
+$ brew install automake
+$ cd buildscripts/darwin-arm64
+$ ./build.sh
+```
+
 
 **特别注意：**
 

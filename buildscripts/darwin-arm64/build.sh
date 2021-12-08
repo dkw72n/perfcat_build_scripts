@@ -6,7 +6,7 @@ realpath() {
 
 MY_DIR=$(dirname `realpath $0`)
 #echo "MY_DIR=${MY_DIR}"
-TARGET_DIR=${MY_DIR}/../../built/darwin-x86_64/
+TARGET_DIR=${MY_DIR}/../../built/darwin-arm64/
 
 mkdir -p ${TARGET_DIR} || true
 export PKG_CONFIG_PATH=${TARGET_DIR}/lib/pkgconfig
@@ -37,10 +37,13 @@ build_openssl(){
   (
   set -ex
   cd ${MY_DIR}/../../openssl
+  git checkout -- .
+  git apply ../patch/openssl_build_darwin64-arm64-cc.patch
   make clean || true
-  ./Configure darwin64-x86_64-cc --prefix=${TARGET_DIR} --openssldir=${TARGET_DIR}/openssl
+  ./Configure darwin64-arm64-cc no-asm --prefix=${TARGET_DIR} --openssldir=${TARGET_DIR}/openssl
   make -j2
   make install
+  git checkout -- .
   )
 }
 
