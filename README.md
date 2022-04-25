@@ -3,20 +3,30 @@
 linux
 
 ```bash
-> git submodule update --init --recursive
-> cd buildscripts/linux-x86_64
-> ./build.sh
+$ git submodule update --init --recursive
+$ cd buildscripts/linux-x86_64
+$ ./build.sh
 ```
 
-windows(build on ubuntu)
+windows(build on ubuntu with mingw64)
 
 ```bash
-> sudo apt install libtool mingw-w64
-> git submodule update --init --recursive
-> cd buildscripts/linux-x86_64
-> ./build.sh
+$ sudo apt install libtool mingw-w64
+$ git submodule update --init --recursive
+$ cd buildscripts/linux-mingw64
+$ ./build.sh
 ```
 
+windows(build on windows with msys2/mingw64)
+
+```bash
+$ pacman -Sy --needed base-devel git mingw-w64-x86_64-gcc make libtool autoconf automake-wrapper cython
+$ git submodule update --init --recursive
+$ cd buildscripts/windows-mingw64
+$ ./build.sh
+```
+
+> NOTE: `libusbmuxd` must be compiled as shared library
 
 macOS(x86_64)
 
