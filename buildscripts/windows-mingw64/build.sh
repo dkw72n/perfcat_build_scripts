@@ -24,6 +24,7 @@ build_libusbmuxd(){
   cd ${MY_DIR}/../../libusbmuxd
   git checkout -- .
   git apply ../patch/libusbmuxd-mingw-caseawearness.patch
+  git apply ../patch/libusbmuxd-windows-errno-bug.patch
   make clean || true
   ./autogen.sh --prefix=${TARGET_DIR} CFLAGS="-fPIC -D_WIN32_WINNT=0x601" # --enable-shared=no 0x0601=Windows 7
   make -j4 V=1
