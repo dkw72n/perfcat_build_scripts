@@ -1,6 +1,6 @@
 # How to build
 
-linux
+## linux
 
 ```bash
 $ git submodule update --init --recursive
@@ -8,7 +8,7 @@ $ cd buildscripts/linux-x86_64
 $ ./build.sh
 ```
 
-windows(build on ubuntu with mingw64)
+## windows(build on ubuntu with mingw64)
 
 ```bash
 $ sudo apt install libtool mingw-w64
@@ -17,18 +17,25 @@ $ cd buildscripts/linux-mingw64
 $ ./build.sh
 ```
 
-windows(build on windows with msys2/mingw64)
+## windows(build on windows with [msys2/mingw64](https://www.msys2.org/))
 
+1. 安装依赖, 打开 `msys2.exe` 执行如下命令:
 ```bash
 $ pacman -Sy --needed base-devel git mingw-w64-x86_64-gcc make libtool autoconf automake-wrapper cython
+```
+
+2. 开始编译, 打开 `mingw64.exe` 执行如下命令，:
+```bash
+$ git clone git@github.com:dkw72n/perfcat_build_scripts.git
 $ git submodule update --init --recursive
 $ cd buildscripts/windows-mingw64
 $ ./build.sh
 ```
+> NOTE: 如下是在windows下拉代码则必须关闭git的autocrlf, 否则换行符会引起编译错误.
 
 > NOTE: `libusbmuxd` must be compiled as shared library
 
-macOS(x86_64)
+## macOS(x86_64)
 
 ```bash
 $ brew install libtool

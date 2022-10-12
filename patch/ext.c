@@ -221,3 +221,156 @@ LIBIMOBILEDEVICE_API instrument_error_t instrument_receive(instrument_client_t c
     instrument_error_t err = instrument_error(service_receive(client->parent, data, size, received));
     return err;
 }
+
+/*
+	AMFI Service
+*/
+struct amfi_client_private {
+	service_client_t parent;
+	mutex_t mutex;
+};
+
+/**
+ * Locks a amfi client, used for thread safety.
+ *
+ * @param client amfi client to lock
+ */
+static void amfi_lock(amfi_client_t client)
+{
+	mutex_lock(&client->mutex);
+}
+
+/**
+ * Unlocks a amfi client, used for thread safety.
+ *
+ * @param client amfi client to unlock
+ */
+static void amfi_unlock(amfi_client_t client)
+{
+	mutex_unlock(&client->mutex);
+}
+
+static amfi_error_t amfi_process_result(plist_t result)
+{
+	amfi_error_t res = AMFI_E_COMMAND_FAILED;
+	char* strval = NULL;
+	uint8_t strval_b;
+	plist_t node;
+
+	node = plist_dict_get_item(result, "Error");
+	if (node && plist_get_node_type(node) == PLIST_STRING) {
+		plist_get_string_val(node, &strval);
+	}
+	if (strval) {
+		if (!strcmp(strval, "Device has a passcode set")) {
+			res = AMFI_E_DEVICE_HAS_A_PASSCODE_SET;
+		} else {
+			res = AMFI_E_UNKNOWN_ERROR;
+		}
+		free(strval);
+		return res;
+	}
+
+	node = plist_dict_get_item(result, "success");
+	if (node && plist_get_node_type(node) == PLIST_BOOLEAN) {
+		plist_get_bool_val(node, &strval_b);
+	}
+	if (!strval_b) {
+		res = AMFI_E_UNKNOWN_ERROR;
+	} else {
+		res = AMFI_E_SUCCESS;
+	}
+	free(strval);
+
+	return res;
+}
+
+/**
+ * Convert a property_list_service_error_t value to a amfi_error_t
+ * value. Used internally to get correct error codes.
+ *
+ * @param err A property_list_service_error_t error code
+ *
+ * @return A matching amfi_error_t error code,
+ *     AMFI_E_UNKNOWN_ERROR otherwise.
+ */
+static amfi_error_t amfi_error(property_list_service_error_t err)
+{
+	switch (err) {
+		case PROPERTY_LIST_SERVICE_E_SUCCESS:
+			return AMFI_E_SUCCESS;
+	    case PROPERTY_LIST_SERVICE_E_INVALID_ARG:
+            return AMFI_E_INVALID_ARG;
+        case PROPERTY_LIST_SERVICE_E_PLIST_ERROR:
+            return AMFI_E_PLIST_ERROR;
+        case PROPERTY_LIST_SERVICE_E_MUX_ERROR:
+            return AMFI_E_CONN_FAILED;
+		default:
+			break;
+	}
+	return AMFI_E_UNKNOWN_ERROR;
+}
+
+LIBIMOBILEDEVICE_API amfi_error_t amfi_client_new(idevice_t device, lockdownd_service_descriptor_t service, amfi_client_t * client) {
+	property_list_service_client_t plistclient = NULL;
+	amfi_error_t err = amfi_error(property_list_service_client_new(device, service, &plistclient));
+	if (err != AMFI_E_SUCCESS) {
+		return err;
+	}
+
+	amfi_client_t client_loc = (amfi_client_t) malloc(sizeof(struct amfi_client_private));
+	client_loc->parent = plistclient;
+
+	mutex_init(&client_loc->mutex);
+
+	*client = client_loc;
+	return AMFI_E_SUCCESS;
+}
+
+LIBIMOBILEDEVICE_API amfi_error_t amfi_client_start_service(idevice_t device, amfi_client_t* client, const char* label) {
+    amfi_error_t err = AMFI_E_UNKNOWN_ERROR;
+    service_client_factory_start_service(device, AMFI_REMOTESERVER_SERVICE_NAME, (void**)client, label, SERVICE_CONSTRUCTOR(amfi_client_new), &err);
+	return err;
+}
+
+LIBIMOBILEDEVICE_API amfi_error_t amfi_client_free(amfi_client_t client) {
+	if (!client) {
+		return AMFI_E_INVALID_ARG;
+	}
+
+	property_list_service_client_free(client->parent);
+	client->parent = NULL;
+	mutex_destroy(&client->mutex);
+	free(client);
+
+	return AMFI_E_SUCCESS;
+}
+
+LIBIMOBILEDEVICE_API amfi_error_t amfi_set_developer_mode(amfi_client_t client, int mode) {
+	amfi_lock(client);
+
+	plist_t result = NULL;
+	plist_t dict = plist_new_dict();
+ 	plist_dict_set_item(dict, "action", plist_new_uint(mode));
+
+  	amfi_error_t ret = amfi_error(property_list_service_send_xml_plist(client->parent, dict));
+    plist_free(dict);
+  	if (ret != AMFI_E_SUCCESS) {
+    	goto leave_unlock;
+  	}
+
+  	ret = amfi_error(property_list_service_receive_plist(client->parent, &result));
+	if (ret != MOBILE_IMAGE_MOUNTER_E_SUCCESS) {
+		debug_info("Error receiving response from device!");
+		goto leave_unlock;
+	}
+
+	ret = amfi_process_result(result);
+
+leave_unlock:
+	amfi_unlock(client);
+	if (result) {
+		plist_free(result);
+	}
+	return ret;
+}
