@@ -254,7 +254,7 @@ static amfi_error_t amfi_process_result(plist_t result)
 {
 	amfi_error_t res = AMFI_E_COMMAND_FAILED;
 	char* strval = NULL;
-	uint8_t strval_b;
+	uint64_t strval_b = 0;
 	plist_t node;
 
 	node = plist_dict_get_item(result, "Error");
@@ -272,8 +272,12 @@ static amfi_error_t amfi_process_result(plist_t result)
 	}
 
 	node = plist_dict_get_item(result, "success");
-	if (node && plist_get_node_type(node) == PLIST_BOOLEAN) {
-		plist_get_bool_val(node, &strval_b);
+	if (node) {
+		if (plist_get_node_type(node) == PLIST_BOOLEAN) {
+			plist_get_bool_val(node, &strval_b);
+		} else if (plist_get_node_type(node) == PLIST_IS_UINT) {
+			plist_get_uint_val(node, &strval_b);
+		}
 	}
 	if (!strval_b) {
 		res = AMFI_E_UNKNOWN_ERROR;
