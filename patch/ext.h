@@ -1,5 +1,8 @@
 #ifndef IMOBILEDEVICE_EXT_H
 #define IMOBILEDEVICE_EXT_H
+#ifndef LIBIMOBILEDEVICE_STATIC
+#define LIBIMOBILEDEVICE_STATIC
+#endif
 #include "libimobiledevice.h"
 #include "mobile_image_mounter.h"
 

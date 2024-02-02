@@ -18,12 +18,23 @@ build_libplist() {
   )
 }
 
+build_libimobiledevice_glue() {
+  (
+  set -ex
+  cd ${MY_DIR}/../../libimobiledevice-glue
+  make clean || true
+  ./autogen.sh --prefix=${TARGET_DIR}
+  make -j4
+  make install
+  )
+}
+
 build_libusbmuxd(){
   (
   set -ex
   cd ${MY_DIR}/../../libusbmuxd
   git checkout -- .
-  git apply ../patch/libusbmuxd-mingw-caseawearness.patch
+  #git apply ../patch/libusbmuxd-mingw-caseawearness.patch
   git apply ../patch/libusbmuxd-windows-errno-bug.patch
   make clean || true
   ./autogen.sh --prefix=${TARGET_DIR} CFLAGS="-fPIC -D_WIN32_WINNT=0x601" # --enable-shared=no 0x0601=Windows 7
@@ -60,6 +71,7 @@ build_libimobiledevice(){
   make -j4 V=1
   make install
   git checkout -- .
+  rm tools/*.exe -f
   rm src/ext.c include/libimobiledevice/ext.h
   )
 }
@@ -67,6 +79,9 @@ build_libimobiledevice(){
 case $1 in 
   libplist)
     build_libplist
+    ;;
+  libimobiledevice_glue)
+    build_libimobiledevice_glue
     ;;
   libusbmuxd)
     build_libusbmuxd
@@ -81,11 +96,12 @@ case $1 in
     (
     set -ex
     build_libplist
+    build_libimobiledevice_glue
     build_libusbmuxd
     build_openssl
     build_libimobiledevice
     )
     ;;
   *)
-    echo "$0 [libplist|libusbmuxd|openssl|libimobiledevice|all]"
+    echo "$0 [libplist|libimobiledevice_glue|libusbmuxd|openssl|libimobiledevice|all]"
 esac

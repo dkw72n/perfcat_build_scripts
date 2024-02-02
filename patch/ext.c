@@ -22,8 +22,8 @@
 #include "idevice.h"
 #include "mobile_image_mounter.h"
 #include "common/userpref.h"
-#include "common/socket.h"
-#include "common/thread.h"
+#include "libimobiledevice-glue/socket.h"
+#include "libimobiledevice-glue/thread.h"
 #include "common/debug.h"
 
 #ifdef WIN32
@@ -275,7 +275,7 @@ static amfi_error_t amfi_process_result(plist_t result)
 	if (node) {
 		if (plist_get_node_type(node) == PLIST_BOOLEAN) {
 			plist_get_bool_val(node, &strval_b);
-		} else if (plist_get_node_type(node) == PLIST_IS_UINT) {
+		} else if (plist_get_node_type(node) == PLIST_INT) {
 			plist_get_uint_val(node, &strval_b);
 		}
 	}

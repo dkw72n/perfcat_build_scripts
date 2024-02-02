@@ -18,6 +18,17 @@ build_libplist() {
   )
 }
 
+build_libimobiledevice_glue() {
+  (
+  set -ex
+  cd ${MY_DIR}/../../libimobiledevice-glue
+  make clean || true
+  ./autogen.sh --prefix=${TARGET_DIR}
+  make -j4
+  make install
+  )
+}
+
 build_libusbmuxd(){
   (
   set -ex
@@ -61,6 +72,9 @@ case $1 in
   libplist)
     build_libplist
     ;;
+  libimobiledevice_glue)
+    build_libimobiledevice_glue
+    ;;
   libusbmuxd)
     build_libusbmuxd
     ;;
@@ -74,11 +88,12 @@ case $1 in
     (
     set -ex
     build_libplist
+    build_libimobiledevice_glue
     build_libusbmuxd
     build_openssl
     build_libimobiledevice
     )
     ;;
   *)
-    echo "$0 [libplist|libusbmuxd|openssl|libimobiledevice|all]"
+    echo "$0 [libplist|libimobiledevice_glue|libusbmuxd|openssl|libimobiledevice|all]"
 esac
