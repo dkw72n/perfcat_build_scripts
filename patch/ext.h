@@ -5,18 +5,26 @@
 #endif
 #include "libimobiledevice.h"
 #include "mobile_image_mounter.h"
+#include "service.h"
+#include "lockdown.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 idevice_error_t idevice_new_force_network(idevice_t * device, const char *udid, const char* host);
+idevice_error_t idevice_new_force_network_ipv6(idevice_t * device, const char *udid, const char* host);
 mobile_image_mounter_error_t mobile_image_mounter_upload_image_file(mobile_image_mounter_client_t client, const char *image_type, const char* image_file_path, const char *signature_file_path);
 mobile_image_mounter_error_t mobile_image_mounter_mount_image_file(mobile_image_mounter_client_t client, const char *image_path, const char *signature_file, const char *image_type, plist_t *result);
 void libimobiledevice_free(void* ptr);
+lockdownd_error_t lockdownd_client_new_with_rsd(idevice_t device, lockdownd_client_t *client, const char *label, int lockdown_port);
+lockdownd_error_t lockdownd_client_new_with_rsd_checkin(idevice_t device, lockdownd_client_t *client, const char *label, int lockdown_port);
+service_error_t service_client_factory_start_service_with_rsd(idevice_t device, const char* service_name, int service_port, void **client, const char* label, int lockdown_port, int32_t (*constructor_func)(idevice_t, lockdownd_service_descriptor_t, void**), int32_t *error_code);
+
 
 #define INSTRUMENT_REMOTESERVER_SERVICE_NAME "com.apple.instruments.remoteserver"
 #define INSTRUMENT_REMOTESERVER_SECURE_SERVICE_NAME INSTRUMENT_REMOTESERVER_SERVICE_NAME ".DVTSecureSocketProxy"
+#define INSTRUMENT_REMOTESERVER_SERVICE_NAME_WITH_RSD "com.apple.instruments.dtservicehub"
 
 /** Error Codes */
 typedef enum {
@@ -65,6 +73,7 @@ instrument_error_t instrument_client_new(idevice_t device, lockdownd_service_des
  *     code otherwise.
  */
 instrument_error_t instrument_client_start_service(idevice_t device, instrument_client_t* client, const char* label);
+instrument_error_t instrument_client_start_service_with_rsd(idevice_t device, instrument_client_t* client, const char* label, int lockdown_port, int service_port);
 
 /**
  * Disconnects a instrument client from the device and frees up the

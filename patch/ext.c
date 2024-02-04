@@ -20,6 +20,7 @@
 
 #include "libimobiledevice/ext.h"
 #include "idevice.h"
+#include "lockdown.h"
 #include "mobile_image_mounter.h"
 #include "common/userpref.h"
 #include "libimobiledevice-glue/socket.h"
@@ -27,10 +28,12 @@
 #include "common/debug.h"
 
 #ifdef WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #include <windows.h>
-#endif
-
-#ifndef WIN32
+#else
+#include <sys/socket.h>
+#include <netinet/in.h>
 #include <netdb.h>
 #endif
 
@@ -57,6 +60,28 @@ LIBIMOBILEDEVICE_API idevice_error_t idevice_new_force_network(idevice_t * devic
 	*device = _device;
 	return IDEVICE_E_SUCCESS;
 
+}
+
+LIBIMOBILEDEVICE_API idevice_error_t idevice_new_force_network_ipv6(idevice_t * device, const char *udid, const char* host)
+{
+	idevice_t _device = (idevice_t)malloc(sizeof(struct idevice_private));
+	if (!_device)
+		return IDEVICE_E_NO_DEVICE;
+
+	struct sockaddr_in6 sa; 
+	memset(&sa, 0, sizeof(sa));
+	sa.sin6_family = AF_INET6;
+	sa.sin6_port = 0; // htons(port);
+	inet_pton(AF_INET6, host, &sa.sin6_addr); 
+
+	_device->udid = strdup(udid);
+	_device->mux_id = 19900724;
+	_device->version = 0;
+	_device->conn_type = CONNECTION_NETWORK;
+	_device->conn_data = malloc(sizeof(sa));
+	memcpy(_device->conn_data, &sa, sizeof(sa));
+	*device = _device;
+	return IDEVICE_E_SUCCESS;
 }
 
 static ssize_t mim_upload_cb(void* buf, size_t size, void* userdata)
@@ -116,6 +141,131 @@ LIBIMOBILEDEVICE_API void libimobiledevice_free(void* ptr){
     free(ptr);
 } 
 
+LIBIMOBILEDEVICE_API lockdownd_error_t lockdownd_client_new_with_rsd(idevice_t device, lockdownd_client_t *client, const char *label, int lockdown_port)
+{
+	if (!device || !client)
+		return LOCKDOWN_E_INVALID_ARG;
+
+	struct lockdownd_service_descriptor service;
+	memset(&service, 0, sizeof(struct lockdownd_service_descriptor));
+	service.port = lockdown_port;
+	service.ssl_enabled = 0;
+
+	property_list_service_client_t plistclient = NULL;
+	if (property_list_service_client_new(device, (lockdownd_service_descriptor_t)&service, &plistclient) != PROPERTY_LIST_SERVICE_E_SUCCESS) {
+		debug_info("could not connect to lockdownd (device %s)", device->udid);
+		return LOCKDOWN_E_MUX_ERROR;
+	}
+
+	lockdownd_client_t client_loc = (lockdownd_client_t) malloc(sizeof(struct lockdownd_client_private));
+	client_loc->parent = plistclient;
+	client_loc->ssl_enabled = 0;
+	client_loc->session_id = NULL;
+	client_loc->device = device;
+	client_loc->cu_key = NULL;
+	client_loc->cu_key_len = 0;
+
+	if (device->udid) {
+		debug_info("device udid: %s", device->udid);
+	}
+
+	client_loc->label = label ? strdup(label) : NULL;
+
+	*client = client_loc;
+
+	return LOCKDOWN_E_SUCCESS;
+}
+
+LIBIMOBILEDEVICE_API lockdownd_error_t lockdownd_client_new_with_rsd_checkin(idevice_t device, lockdownd_client_t *client, const char *label, int lockdown_port)
+{
+	if (!client)
+		return LOCKDOWN_E_INVALID_ARG;
+
+	lockdownd_error_t ret = LOCKDOWN_E_SUCCESS;
+	lockdownd_client_t client_loc = NULL;
+	plist_t pair_record = NULL;
+	char *host_id = NULL;
+	char *type = NULL;
+
+	ret = lockdownd_client_new_with_rsd(device, &client_loc, label, lockdown_port);
+	if (LOCKDOWN_E_SUCCESS != ret) {
+		debug_info("failed to create lockdownd client.");
+		return ret;
+	}
+
+	plist_t dict = plist_new_dict();
+	plist_dict_set_item(dict, "Label", plist_new_string(label));
+	plist_dict_set_item(dict, "Request", plist_new_string("RSDCheckin"));
+	plist_dict_set_item(dict, "ProtocolVersion", plist_new_string(LOCKDOWN_PROTOCOL_VERSION));
+	plist_print(dict);
+
+	ret = lockdownd_send(client_loc, dict);
+	plist_free(dict);
+	dict = NULL;
+	if (LOCKDOWN_E_SUCCESS != ret)
+		return ret;
+
+	ret = lockdownd_receive(client_loc, &dict);
+	if (LOCKDOWN_E_SUCCESS != ret)
+		return ret;
+	plist_print(dict); // { "Request": "RSDCheckin" }
+	plist_t request = plist_dict_get_item(dict, "Request");
+	if (request == NULL || plist_string_val_compare(request, "RSDCheckin")) {
+		return LOCKDOWN_E_UNKNOWN_ERROR;
+	}
+	plist_free(dict);
+	dict = NULL;
+
+	ret = lockdownd_receive(client_loc, &dict);
+	if (LOCKDOWN_E_SUCCESS != ret)
+		return ret;
+	plist_print(dict); // { "Request": "StartService" }
+	request = plist_dict_get_item(dict, "Request");
+	if (request == NULL || plist_string_val_compare(request, "StartService")) {
+		return LOCKDOWN_E_UNKNOWN_ERROR;
+	}
+	plist_free(dict);
+	dict = NULL;
+
+	*client = client_loc;
+	return LOCKDOWN_E_SUCCESS;
+}
+
+LIBIMOBILEDEVICE_API service_error_t service_client_factory_start_service_with_rsd(idevice_t device, const char* service_name, int service_port, void **client, const char* label, int lockdown_port, int32_t (*constructor_func)(idevice_t, lockdownd_service_descriptor_t, void**), int32_t *error_code) 
+{
+	*client = NULL;
+
+	lockdownd_client_t lckd = NULL;
+	if (LOCKDOWN_E_SUCCESS != lockdownd_client_new_with_rsd(device, &lckd, label, lockdown_port)) {
+		debug_info("Could not create a lockdown client.");
+		return SERVICE_E_START_SERVICE_ERROR;
+	}
+
+	lockdownd_service_descriptor_t service = (lockdownd_service_descriptor_t)malloc(sizeof(struct lockdownd_service_descriptor));
+	service->port = service_port;
+	service->ssl_enabled = 0;
+	service->identifier = strdup(service_name);
+
+	int32_t ec;
+	if (constructor_func) {
+		ec = (int32_t)constructor_func(device, service, client);
+	} else {
+		ec = service_client_new(device, service, (service_client_t*)client);
+	}
+	if (error_code) {
+		*error_code = ec;
+	}
+
+	if (ec != SERVICE_E_SUCCESS) {
+		debug_info("Could not connect to service %s! Port: %i, error: %i", service_name, service->port, ec);
+	}
+
+	lockdownd_service_descriptor_free(service);
+	service = NULL;
+
+	return (ec == SERVICE_E_SUCCESS) ? SERVICE_E_SUCCESS : SERVICE_E_START_SERVICE_ERROR;
+}
+
 struct instrument_client_private {
 	service_client_t parent;
 };
@@ -172,6 +322,32 @@ LIBIMOBILEDEVICE_API instrument_error_t instrument_client_start_service(idevice_
     // internal_set_debug_level(1);
     instrument_error_t err = INSTRUMENT_E_UNKNOWN_ERROR;
     instrument_error_t start_service_error = INSTRUMENT_E_UNKNOWN_ERROR;
+	
+	// try secure mode
+	start_service_error = instrument_error(service_client_factory_start_service(device, INSTRUMENT_REMOTESERVER_SECURE_SERVICE_NAME, (void**)client, label, SERVICE_CONSTRUCTOR(instrument_client_new), &err));
+    if (start_service_error == INSTRUMENT_E_SUCCESS){
+        return err;
+    }
+    // fallback
+    start_service_error = instrument_error(service_client_factory_start_service(device, INSTRUMENT_REMOTESERVER_SERVICE_NAME, (void**)client, label, SERVICE_CONSTRUCTOR(instrument_client_new), &err));
+    if (start_service_error == INSTRUMENT_E_SUCCESS){
+        return err;
+    }
+    return start_service_error;
+}
+
+LIBIMOBILEDEVICE_API instrument_error_t instrument_client_start_service_with_rsd(idevice_t device, instrument_client_t* client, const char* label, int lockdown_port, int service_port){
+    // internal_set_debug_level(1);
+    instrument_error_t err = INSTRUMENT_E_UNKNOWN_ERROR;
+    instrument_error_t start_service_error = INSTRUMENT_E_UNKNOWN_ERROR;
+
+	// try rsd mode first
+	if (lockdown_port > 0 && service_port > 0) {
+		start_service_error = instrument_error(service_client_factory_start_service_with_rsd(device, INSTRUMENT_REMOTESERVER_SERVICE_NAME_WITH_RSD, service_port, (void**)client, label, lockdown_port, SERVICE_CONSTRUCTOR(instrument_client_new), &err));
+		if (start_service_error == INSTRUMENT_E_SUCCESS){
+			return err;
+		}
+	}
 	
 	// try secure mode
 	start_service_error = instrument_error(service_client_factory_start_service(device, INSTRUMENT_REMOTESERVER_SECURE_SERVICE_NAME, (void**)client, label, SERVICE_CONSTRUCTOR(instrument_client_new), &err));
